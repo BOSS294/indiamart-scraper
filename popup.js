@@ -35,6 +35,14 @@ const toast      = $("toast");
 const urlWarn    = $("urlWarn");
 const kwInput    = $("kwInput");
 const locInput   = $("locInput");
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Delhi", "Jammu and Kashmir"
+];
 
 /* ── Init: detect current tab ───────────────────────────── */
 chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
@@ -63,23 +71,32 @@ chrome.storage.local.get(["imResults", "imKeyword", "imLocation"], (stored) => {
     showTable();
   }
 });
+const stateList = document.createElement("datalist");
+stateList.id = "stateList";
+INDIAN_STATES.forEach((s) => {
+  const opt = document.createElement("option");
+  opt.value = s;
+  stateList.appendChild(opt);
+});
+document.body.appendChild(stateList);
+locInput.setAttribute("list", "stateList");
+locInput.placeholder = "Type or pick states, comma separated";
 
 openBtn.addEventListener("click", () => {
   const kw = kwInput.value.trim() || "home furniture manufacturer";
   const locRaw = locInput.value.trim();
 
-  // Allow: "Delhi, Maharashtra, Gujarat"
   const states = locRaw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const url = `https://dir.indiamart.com/search.mp?ss=${encodeURIComponent(kw)}&v=4${
+  const searchUrl = `https://dir.indiamart.com/search.mp?ss=${encodeURIComponent(kw)}&v=4${
     states.length ? `&cq=${encodeURIComponent(states[0])}` : ""
   }`;
 
-  chrome.tabs.create({ url });
-  showToast("Opening IndiaMART search…");
+  chrome.tabs.create({ url: searchUrl });
+  showToast("🔗 Opening IndiaMART search…");
 });
 
 startBtn.addEventListener("click", async () => {
