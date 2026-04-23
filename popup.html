@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IndiaMART Scraper Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── Design Tokens ─────────────────────────────────── */
+    :root {
+      --bg0:      #080b0e;
+      --bg1:      #0d1117;
+      --bg2:      #111820;
+      --bg3:      #16202c;
+      --bg4:      #1c2a38;
+      --border:   #1e2d3d;
+      --border2:  #243344;
+      --ink0:     #e8edf3;
+      --ink1:     #a8b8c8;
+      --ink2:     #5a7080;
+      --ink3:     #384858;
+      --green:    #00e5a0;
+      --green2:   #00c87d;
+      --green3:   #0a3025;
+      --blue:     #4fa0f7;
+      --blue2:    #0e2238;
+      --orange:   #ff8c42;
+      --orange2:  #2a1808;
+      --red:      #ff4d6a;
+      --yellow:   #ffc940;
+      --purple:   #9b8dff;
+      --mono:     'Space Mono', monospace;
+      --sans:     'DM Sans', sans-serif;
+      --r4:       4px;
+      --r6:       6px;
+      --r8:       8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 12px; }
+
+    body {
+      width: 720px;
+      min-height: 560px;
+      max-height: 680px;
+      background: var(--bg0);
+      color: var(--ink0);
+      font-family: var(--sans);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    /* ── Header ────────────────────────────────────────── */
+    .header {
+      background: var(--bg1);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--green) 0%, #00a86b 100%);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-size: 11px; font-weight: 700;
+      color: #03180e;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .header-info { flex: 1; }
+    .header-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--ink0);
+      letter-spacing: 0.01em;
+    }
+    .header-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--ink2);
+      margin-top: 1px;
+    }
+
+    /* Status pill */
+    #statusPill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    #statusPill[data-s="idle"]    { background: var(--bg3); color: var(--ink2); border: 1px solid var(--border); }
+    #statusPill[data-s="running"] { background: var(--green3); color: var(--green); border: 1px solid var(--green2); }
+    #statusPill[data-s="done"]    { background: #0a2818; color: #00e5a0; border: 1px solid #00a86b; }
+    #statusPill[data-s="error"]   { background: #220a0e; color: var(--red); border: 1px solid #662030; }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    [data-s="running"] .status-dot { animation: blink 1.2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── URL Bar ───────────────────────────────────────── */
+    .url-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 16px;
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .url-icon { color: var(--green); font-size: 10px; flex-shrink: 0; }
+    #pageUrl {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--ink2);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1;
+    }
+
+    /* ── Warning Banner ────────────────────────────────── */
+    #urlWarn {
+      background: var(--orange2);
+      border-bottom: 1px solid #4a2810;
+      padding: 6px 16px;
+      font-size: 10.5px;
+      color: var(--orange);
+      display: none;
+      align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Search Bar ────────────────────────────────────── */
+    .search-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .search-group {
+      display: flex; align-items: center; gap: 6px;
+      flex: 1;
+    }
+    .search-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--ink2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+    }
+    .search-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--r6);
+      color: var(--ink0);
+      font-family: var(--sans);
+      font-size: 11px;
+      padding: 5px 9px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--green); }
+    .search-input::placeholder { color: var(--ink3); }
+    .search-sep {
+      width: 1px; height: 20px;
+      background: var(--border);
+    }
+
+    /* ── Stats ─────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat {
+      padding: 8px 10px;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--ink2);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 20px; font-weight: 700;
+      line-height: 1;
+    }
+    .stat-val.g { color: var(--green); }
+    .stat-val.b { color: var(--blue); }
+    .stat-val.o { color: var(--orange); }
+    .stat-val.p { color: var(--purple); }
+    .stat-val.y { color: var(--yellow); }
+
+    /* ── Toolbar ───────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      gap: 7px;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--r6);
+      font-family: var(--sans);
+      font-size: 11px; font-weight: 600;
+      padding: 7px 14px;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    .btn-primary {
+      flex: 1;
+      background: var(--green);
+      color: #03180e;
+    }
+    .btn-primary:hover:not(:disabled) { background: #00ffba; }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+
+    .btn-ghost {
+      background: var(--bg3);
+      color: var(--ink1);
+      border: 1px solid var(--border2);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--bg4); }
+    .btn-excel {
+      background: var(--bg3);
+      color: #70c87a;
+      border: 1px solid #1e3826;
+    }
+    .btn-excel:hover:not(:disabled) { background: #102018; }
+    .btn-clear {
+      background: var(--bg3);
+      color: var(--red);
+      border: 1px solid #2a1018;
+    }
+    .btn-clear:hover:not(:disabled) { background: #1a0810; }
+
+    /* ── Progress ──────────────────────────────────────── */
+    #progWrap {
+      display: none;
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 5px;
+      flex-direction: column;
+    }
+    .prog-row { display: flex; justify-content: space-between; align-items: center; }
+    .prog-track {
+      height: 3px;
+      background: var(--bg4);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    #progBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--green2), var(--green));
+      border-radius: 99px;
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    }
+    #progText {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--green);
+    }
+    #progLabel {
+      font-size: 10px;
+      color: var(--ink2);
+    }
+
+    /* ── Body Split ────────────────────────────────────── */
+    .split {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Log Panel ─────────────────────────────────────── */
+    .log-panel {
+      width: 210px;
+      flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+    .panel-hd {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 8.5px;
+      color: var(--ink2);
+      text-transform: uppercase; letter-spacing: 0.12em;
+      flex-shrink: 0;
+      display: flex; justify-content: space-between;
+    }
+    #logWrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 5px 4px;
+    }
+    .log-entry {
+      display: flex; gap: 5px;
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.65;
+      padding: 1.5px 4px;
+      border-radius: 3px;
+      word-break: break-word;
+    }
+    .log-ts { color: var(--ink3); flex-shrink: 0; }
+    .log-info .log-msg    { color: var(--ink1); }
+    .log-success .log-msg { color: var(--green); }
+    .log-error .log-msg   { color: var(--red); }
+    .log-warn .log-msg    { color: var(--yellow); }
+
+    /* ── Table Panel ───────────────────────────────────── */
+    .data-panel {
+      flex: 1;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* Empty state */
+    #emptyState {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px;
+      color: var(--ink3);
+    }
+    .empty-icon {
+      font-size: 40px; opacity: 0.5;
+      filter: grayscale(0.3);
+    }
+    .empty-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--ink2);
+    }
+    .empty-hint {
+      font-size: 10.5px;
+      color: var(--ink3);
+      text-align: center;
+      line-height: 1.7;
+    }
+    .empty-url {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--ink3);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r4);
+      padding: 6px 10px;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Table */
+    #tableWrap {
+      flex: 1;
+      overflow: auto;
+      display: none;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    thead th {
+      position: sticky; top: 0;
+      background: var(--bg2);
+      font-family: var(--mono);
+      font-size: 8px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--ink2);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:hover { background: var(--bg2); }
+    tbody td {
+      padding: 5px 8px;
+      max-width: 140px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      vertical-align: middle;
+    }
+    .td-idx { color: var(--ink3); font-family: var(--mono); font-size: 9px; max-width: 28px; }
+    .td-name a { color: var(--blue); text-decoration: none; font-weight: 600; }
+    .td-name a:hover { text-decoration: underline; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 9px;
+      white-space: nowrap;
+    }
+    .chip-phone { background: var(--green3); color: var(--green); border: 1px solid #1a5038; }
+    .chip-email { background: var(--blue2); color: var(--blue); border: 1px solid #1a3050; }
+    .chip-none  { color: var(--ink3); font-family: var(--mono); font-size: 9px; }
+
+    /* ── Toast ─────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 14px; left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--bg3);
+      color: var(--ink0);
+      border: 1px solid var(--border2);
+      padding: 7px 18px;
+      border-radius: 99px;
+      font-size: 11px; font-weight: 600;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">IM</div>
+  <div class="header-info">
+    <div class="header-title">IndiaMART Supplier Scraper Pro</div>
+    <div class="header-sub">v2.0 · Enterprise Grade · Excel Export</div>
+  </div>
+  <div id="statusPill" data-s="idle">
+    <div class="status-dot"></div>
+    <span id="statusTxt">IDLE</span>
+  </div>
+</div>
+
+<!-- URL Bar -->
+<div class="url-bar">
+  <span class="url-icon">◉</span>
+  <span id="pageUrl">Detecting page…</span>
+</div>
+
+<!-- Warning -->
+<div id="urlWarn">
+  ⚠ Navigate to an IndiaMART search results page to begin scraping.
+</div>
+
+<!-- Search Config -->
+<div class="search-bar">
+  <div class="search-group">
+    <span class="search-label">Search</span>
+    <input class="search-input" id="kwInput" placeholder="e.g. home furniture manufacturer" value="home furniture manufacturer"/>
+  </div>
+  <div class="search-sep"></div>
+  <div class="search-group" style="max-width:180px">
+    <span class="search-label">Location</span>
+    <input class="search-input" id="locInput" placeholder="e.g. Delhi (optional)"/>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat">
+    <div class="stat-lbl">Total</div>
+    <div class="stat-val g" id="cTotal">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">Phones</div>
+    <div class="stat-val b" id="cPhone">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">Emails</div>
+    <div class="stat-val o" id="cEmail">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">w/ Address</div>
+    <div class="stat-val p" id="cAddr">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">Complete</div>
+    <div class="stat-val y" id="cComp">0</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="btn btn-primary" id="startBtn">▶ Start Scraping</button>
+  <button class="btn btn-ghost"   id="openBtn">🔗 Open Search Page</button>
+  <button class="btn btn-excel"   id="exportBtn" disabled>⬇ Export Excel</button>
+  <button class="btn btn-clear"   id="clearBtn"  disabled>✕ Clear</button>
+</div>
+
+<!-- Progress -->
+<div id="progWrap">
+  <div class="prog-row">
+    <span id="progLabel">Initialising…</span>
+    <span id="progText">0 / 0</span>
+  </div>
+  <div class="prog-track">
+    <div id="progBar"></div>
+  </div>
+</div>
+
+<!-- Body Split -->
+<div class="split">
+
+  <!-- Log -->
+  <div class="log-panel">
+    <div class="panel-hd">
+      <span>▸ Activity Log</span>
+      <span id="logCount">0 lines</span>
+    </div>
+    <div id="logWrap"></div>
+  </div>
+
+  <!-- Data -->
+  <div class="data-panel">
+    <div class="panel-hd">
+      <span>▸ Scraped Suppliers</span>
+      <span id="rowCount">0 rows</span>
+    </div>
+
+    <div id="emptyState">
+      <div class="empty-icon">🏭</div>
+      <div class="empty-title">No Data Yet</div>
+      <div class="empty-hint">
+        Open an IndiaMART search page and click<br/>
+        <strong>▶ Start Scraping</strong> to begin.
+      </div>
+      <div class="empty-url">https://dir.indiamart.com/search.mp?ss=home+furniture+manufacturer</div>
+    </div>
+
+    <div id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Company</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Location</th>
+            <th>CEO/Owner</th>
+            <th>Employees</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="xlsxgen.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
