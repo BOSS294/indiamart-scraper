@@ -65,11 +65,21 @@ chrome.storage.local.get(["imResults", "imKeyword", "imLocation"], (stored) => {
 });
 
 openBtn.addEventListener("click", () => {
-  const kw  = kwInput.value.trim()  || "home furniture manufacturer";
-  const loc = locInput.value.trim() || "";
-  const url = `https://dir.indiamart.com/search.mp?ss=${encodeURIComponent(kw)}&v=4${loc ? `&cq=${encodeURIComponent(loc)}` : ""}`;
+  const kw = kwInput.value.trim() || "home furniture manufacturer";
+  const locRaw = locInput.value.trim();
+
+  // Allow: "Delhi, Maharashtra, Gujarat"
+  const states = locRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const url = `https://dir.indiamart.com/search.mp?ss=${encodeURIComponent(kw)}&v=4${
+    states.length ? `&cq=${encodeURIComponent(states[0])}` : ""
+  }`;
+
   chrome.tabs.create({ url });
-  showToast("🔗 Opening IndiaMART search…");
+  showToast("Opening IndiaMART search…");
 });
 
 startBtn.addEventListener("click", async () => {
